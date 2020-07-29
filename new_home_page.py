@@ -5,6 +5,7 @@ from dbconnection import connection
 from wtforms import Form, BooleanField,TextField,PasswordField,validators
 from passlib.hash import sha256_crypt
 from MySQLdb import escape_string as thwart
+from functools import wraps
 import gc
 
 
@@ -36,29 +37,65 @@ def page_not_found(e):
 
 
 
+def login_required(f):
+	@wraps(f)
+	def wrap(*args, **kwargs):
+		if 'logged_in' in session:
+			return f(*args, **kwargs)
+		else:
+			flash("You need to login first")
+			return redirect(url_for('login_page'))
+
+	return wrap
+
+@login_required
+@app.route("/logout/")
+
+def logout():
+	session.clear()
+	flash("You have been logged out")
+	gc.collect()
+	return redirect(url_for('dashboard'))
+
+
+
+
+
+
 @app.route('/login/', methods=["GET","POST"])
 def login():
 
 	error = ''
 
 	try:
+		c, conn = connection()
 		if request.method == "POST":
-			attempted_username = request.form['username']
-			attempted_password = request.form['password']
 
-			flash(attempted_username)
-			flash(attempted_password)
+			#request_data = request.form.to_dict(flat=False)
+			username = request.form['username']
 
-			if attempted_username == "admin" and attempted_password == "password":
-				return redirect(url_for('dashboard'))
+			data = c.execute("SELECT * FROM users WHERE username=(%s)",(username,))
+			data = c.fetchone()[2]
+
+			if sha256_crypt.verify(request.form['password'], data):
+				session['logged_in'] = True
+				session['username'] = request.form['username']
+
+				flash("You are now logged in")
+				return redirect(url_for("dashboard"))
+
 			else:
-				error = "Invalid credentials.Try Again."
+				error = "Invaild credentials, try again."
+
+		gc.collect()
+			
 
 		return render_template("login.html" , error=error )
 
 
 	except Exception as e:
-		flash(e)
+		#flash(e)
+		error = "Invaild credentials, try again."
 		return render_template('login.html', error=error )
 
 
