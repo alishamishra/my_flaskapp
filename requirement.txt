@@ -1,0 +1,11 @@
+pip install -U Flask
+sudo apt-get install mysql-server
+sudo apt-get install libmysqlclient-dev
+pip install flask_mysqldb
+pip install flask-wtf
+pip install passlib
+
+for login into mysql
+
+sudo mysql -u root
+pwd: !@aA12345

@@ -26,7 +26,7 @@ def homepage():
 @app.route('/dashboard/')
 def dashboard():
 
-    flash("test!!")
+    #flash("test!!")
     return render_template('dashboard.html', TOPIC_DICT=TOPIC_DICT )
 
 
@@ -62,90 +62,96 @@ def logout():
 
 
 
+
 @app.route('/login/', methods=["GET","POST"])
 def login():
 
-	error = ''
+    error = ''
 
-	try:
-		c, conn = connection()
-		if request.method == "POST":
+    try:
+        c, conn = connection()
+        if request.method == "POST":
 
-			#request_data = request.form.to_dict(flat=False)
-			username = request.form['username']
+            #request_data = request.form.to_dict(flat=False)
+            username = request.form['username']
 
-			data = c.execute("SELECT * FROM users WHERE username=(%s)",(username,))
-			data = c.fetchone()[2]
+            data = c.execute("SELECT * FROM users WHERE username=(%s)",(username,))
+            data = c.fetchone()[2]
 
-			if sha256_crypt.verify(request.form['password'], data):
-				session['logged_in'] = True
-				session['username'] = request.form['username']
+            if sha256_crypt.verify(request.form['password'], data):
+                session['logged_in'] = True
+                session['username'] = request.form['username']
 
-				flash("You are now logged in")
-				return redirect(url_for("dashboard"))
+                flash("You are now logged in")
+                return redirect(url_for("dashboard"))
 
-			else:
-				error = "Invaild credentials, try again."
+            else:
+                error = "Invaild credentials, try again."
 
-		gc.collect()
-			
+        gc.collect()
+            
 
-		return render_template("login.html" , error=error )
+        return render_template("login.html" , error=error )
 
 
-	except Exception as e:
-		#flash(e)
-		error = "Invaild credentials, try again."
-		return render_template('login.html', error=error )
+    except Exception as e:
+        #flash(e)
+        error = "Invaild credentials, try again."
+        return render_template('login.html', error=error )
 
 
 
 class RegistrationForm(Form):
-	username = TextField('Username', [validators.Length(min=4, max=20)])
-	email = TextField('Email Address', [validators.Length(min=6, max=50)])
-	password = PasswordField('New Password', [validators.Required(), validators.EqualTo('confirm', message='Passwords must match')])
-	confirm = PasswordField('Repeat Password')
-	accept_tos = BooleanField('I accept the Terms of Service and Privacy Notice(updated jul 20, 2020)',[validators.Required()])
+    username = TextField('Username', [validators.Length(min=4, max=20)])
+    email = TextField('Email Address', [validators.Length(min=6, max=50)])
+    password = PasswordField('New Password', [validators.Required(), validators.EqualTo('confirm', message='Passwords must match')])
+    confirm = PasswordField('Repeat Password')
+    accept_tos = BooleanField('I accept the Terms of Service and Privacy Notice(updated jul 20, 2020)',[validators.Required()])
 
 
 @app.route('/register/', methods=["GET","POST"])
 
 def register_page():
-	try:
-		form = RegistrationForm(request.form)
+    try:
+        form = RegistrationForm(request.form)
 
-		if request.method == "POST" and form.validate():
-			username = form.username.data
-			email = form.email.data
-			password = sha256_crypt.encrypt((str(form.password.data)))
-			c,conn = connection()
+        if request.method == "POST" and form.validate():
+            username = form.username.data
+            email = form.email.data
+            password = sha256_crypt.encrypt((str(form.password.data)))
+            c,conn = connection()
 
-			x = c.execute("SELECT * FROM users WHERE username=(%s)",(username,))
+            x = c.execute("SELECT * FROM users WHERE username=(%s)",(username,))
 
-			if int(x) > 0:
-				flash("That username is already taken, please choose another number")
-				return render_template('register.html' , form=form)
+            if int(x) > 0:
+                flash("That username is already taken, please choose another number")
+                return render_template('register.html' , form=form)
 
-			else:
-				c.execute("INSERT INTO users (username,password,email,tracking) VALUES (%s,%s,%s,%s)",
-					(thwart(username), thwart(password),thwart(email),thwart("/introduction-to-python-programming/")))
-				conn.commit()
-				flash("thanks for registering!")
-				c.close()
-				conn.close()
-				gc.collect()
+            else:
+                c.execute("INSERT INTO users (username,password,email,tracking) VALUES (%s,%s,%s,%s)",
+                    (thwart(username), thwart(password),thwart(email),thwart("/introduction-to-python-programming/")))
+                conn.commit()
+                flash("thanks for registering!")
+                c.close()
+                conn.close()
+                gc.collect()
 
-				session['logged_in'] = True
-				session['username'] = username
+                session['logged_in'] = True
+                session['username'] = username
 
-				return redirect(url_for('dashboard'))
+                return redirect(url_for('dashboard'))
 
-		return render_template("register.html", form=form)
+        return render_template("register.html", form=form)
 
 
-	except Exception as e:
-		return(str(e))
+    except Exception as e:
+        return(str(e))
 
+
+
+@app.route('/support/')
+def support():
+    return render_template('support.html')
 
 
 
@@ -157,4 +163,4 @@ if __name__ == '__main__':
     # sess.init_app(app)
 
     app.debug = True
-    app.run()
+    app.run(port=6500)
